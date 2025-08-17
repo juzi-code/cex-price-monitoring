@@ -28,7 +28,7 @@ func main() {
 	fmt.Println("期货-市场数量:", len(futuresSymbols))
 	for interval := range constant.PriceChangeThresholdMap {
 		var symbolIntervalPair = make(map[string]string)
-		for _, symbol := range symbols {
+		for _, symbol := range futuresSymbols {
 			symbolIntervalPair[symbol] = interval
 		}
 		go (func() {
