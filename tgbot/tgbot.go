@@ -4,9 +4,9 @@ import (
 	"cex-price-monitoring/conf"
 	"cex-price-monitoring/constant"
 	"cex-price-monitoring/data"
+	"cex-price-monitoring/logger"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -26,7 +26,7 @@ func NewTgBot() *tgbotapi.BotAPI {
 	// 使用自定义的 http.Client 初始化 bot
 	bot, err := tgbotapi.NewBotAPIWithClient(conf.Cfg().TelegramData.BotToken, tgbotapi.APIEndpoint, client)
 	if err != nil {
-		log.Panicf("无法初始化BotAPI: %v", err)
+		logger.Fatalf("无法初始化BotAPI: %v", err)
 	}
 
 	bot.Debug = true
@@ -44,6 +44,7 @@ func SendPriceChangeMessage(priceChangeSignal data.PriceChangeSignal, telegramCh
 	lowPrice := priceChangeSignal.LowPrice
 	quoteVolume := priceChangeSignal.QuoteVolume
 	PriceChangePercent := priceChangeSignal.PriceChangePercent
+	Amplitude := priceChangeSignal.Amplitude
 	TradeNum := priceChangeSignal.TradeNum
 	Time := priceChangeSignal.Time
 
@@ -66,6 +67,7 @@ func SendPriceChangeMessage(priceChangeSignal data.PriceChangeSignal, telegramCh
 			"- 类型: %s\n"+
 			"- 代币: `%s`\n"+
 			"- 区间: ***%s***\n"+
+			"- 振幅: %s\n"+
 			"- 涨幅: %s(%s)\n"+
 			"- 最新价: %s\n"+
 			"- 开盘价: %s(%s)\n"+
@@ -77,6 +79,7 @@ func SendPriceChangeMessage(priceChangeSignal data.PriceChangeSignal, telegramCh
 		_type,
 		strings.Replace(symbol, "USDT", "", -1),
 		cexName+"-"+interval,
+		formatFloatToStr(Amplitude*100, 2)+"%",
 		formatFloatToStr(PriceChangePercent*100, 2)+"%",
 		formatFloatToStr(PriceChangePercent24h, 2)+"%",
 		formatFloatToStr(LastPrice24h, 8),
@@ -94,9 +97,17 @@ func SendPriceChangeMessage(priceChangeSignal data.PriceChangeSignal, telegramCh
 	msg.ParseMode = tgbotapi.ModeMarkdown
 	message, _err := NewTgBot().Send(msg)
 	if _err != nil {
-		log.Panicf("发送消息失败: %v", _err)
+		logger.WithFields(logger.Fields{
+			"chat_id": telegramChatID,
+			"symbol":  symbol,
+			"error":   _err,
+		}).Error("发送Telegram消息失败")
 	} else {
-		log.Printf("Message sent to chatID %d: %s", message.Chat.ID, message.Text)
+		logger.WithFields(logger.Fields{
+			"chat_id":    message.Chat.ID,
+			"message_id": message.MessageID,
+			"symbol":     symbol,
+		}).Info("Telegram消息发送成功")
 	}
 }
 
@@ -115,7 +126,7 @@ func formatDateStr(_time time.Time) string {
 	// 设置 UTC+8 时区
 	loc, err := time.LoadLocation("Asia/Shanghai") // 上海时间（UTC+8）
 	if err != nil {
-		fmt.Println("加载时区失败:", err)
+		logger.WithField("error", err).Error("加载时区失败")
 		return ""
 	}
 

@@ -1,8 +1,8 @@
 package binance
 
 import (
+	"cex-price-monitoring/logger"
 	"context"
-	"fmt"
 	adshaoBinance "github.com/adshao/go-binance/v2/futures"
 	binanceconnector "github.com/binance/binance-connector-go"
 	"strings"
@@ -21,7 +21,7 @@ func GetAllSpotUSDTMarket() []string {
 	allExchange := client.NewExchangeInfoService()
 	res, err := allExchange.Do(context.Background())
 	if err != nil {
-		fmt.Println(err)
+		logger.WithField("error", err).Error("获取现货交易对信息失败")
 		return nil
 	}
 	//打印res.Symbols各个元素的值
@@ -42,7 +42,7 @@ func GetAllFuturesUSDTMarket() []string {
 	allExchange := clientFutures.NewExchangeInfoService()
 	res, err := allExchange.Do(context.Background())
 	if err != nil {
-		fmt.Println(err)
+		logger.WithField("error", err).Error("获取期货交易对信息失败")
 		return nil
 	}
 	//打印res.Symbols各个元素的值
@@ -61,11 +61,11 @@ func GetAllFuturesUSDTMarket() []string {
 func GetTicker24h(symbol string) *binanceconnector.Ticker24hrResponse {
 	ticker24hrResponseArr, err := client.NewTicker24hrService().Symbol(symbol).Do(context.Background())
 	if err != nil {
-		fmt.Println(err)
+		logger.WithFields(logger.Fields{"symbol": symbol, "error": err}).Error("获取现货24h行情失败")
 		return nil
 	}
 	if len(ticker24hrResponseArr) == 0 {
-		fmt.Println("getTicker24h result null")
+		logger.WithField("symbol", symbol).Warn("现货24h行情数据为空")
 		return nil
 	}
 	return ticker24hrResponseArr[0]
@@ -73,11 +73,11 @@ func GetTicker24h(symbol string) *binanceconnector.Ticker24hrResponse {
 func GetTicker24hFutures(symbol string) *adshaoBinance.PriceChangeStats {
 	ticker24hrResponseArr, err := clientFutures.NewListPriceChangeStatsService().Symbol(symbol).Do(context.Background())
 	if err != nil {
-		fmt.Println(err)
+		logger.WithFields(logger.Fields{"symbol": symbol, "error": err}).Error("获取期货24h行情失败")
 		return nil
 	}
 	if len(ticker24hrResponseArr) == 0 {
-		fmt.Println("etTicker24hFutures result null")
+		logger.WithField("symbol", symbol).Warn("期货24h行情数据为空")
 		return nil
 	}
 	return ticker24hrResponseArr[0]

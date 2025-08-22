@@ -1,6 +1,7 @@
 package conf
 
 import (
+	"cex-price-monitoring/logger"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -17,7 +18,8 @@ type telegramData struct {
 }
 
 type Config struct {
-	TelegramData telegramData `yaml:"tg"`
+	TelegramData telegramData      `yaml:"tg"`
+	LogConfig    *logger.LogConfig `yaml:"log"`
 }
 
 var (
@@ -33,6 +35,8 @@ func Cfg() *Config {
 func LoadConfigFile() *Config {
 	once.Do(func() {
 		cfg = new(Config)
+		// 设置默认日志配置
+		cfg.LogConfig = logger.DefaultConfig()
 	})
 	yamlFile, err := ioutil.ReadFile(confPath)
 	if err != nil {
@@ -42,6 +46,12 @@ func LoadConfigFile() *Config {
 	if err != nil {
 		fmt.Println(err.Error())
 	}
+
+	// 如果配置文件中没有日志配置，使用默认配置
+	if cfg.LogConfig == nil {
+		cfg.LogConfig = logger.DefaultConfig()
+	}
+
 	return cfg
 }
 

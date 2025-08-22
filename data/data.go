@@ -13,6 +13,7 @@ type PriceChangeSignal struct {
 	LowPrice           float64
 	QuoteVolume        float64
 	PriceChangePercent float64
+	Amplitude          float64
 	TradeNum           int64
 	Time               time.Time
 	CoinTicker         *CoinTicker
