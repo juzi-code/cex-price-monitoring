@@ -55,7 +55,7 @@ func SendPriceChangeMessage(priceChangeSignal data.PriceChangeSignal, telegramCh
 	quoteVolume24h := priceChangeSignal.CoinTicker.QuoteVolume
 	PriceChangePercent24h := priceChangeSignal.CoinTicker.PriceChangePercent
 	Count24h := priceChangeSignal.CoinTicker.Count
-
+	simpleSymbol := strings.Replace(symbol, "USDT", "", -1)
 	// 使用 fmt.Sprintf 格式化消息字符串
 	emojiStr := "🟢🟢🟢"
 	if PriceChangePercent < 0 {
@@ -63,13 +63,12 @@ func SendPriceChangeMessage(priceChangeSignal data.PriceChangeSignal, telegramCh
 	}
 	messageStr := fmt.Sprintf(
 		emojiStr+
-			"***价格波动***\n"+
-			"- 类型: %s\n"+
+			"***%s: 价格波动***\n"+
 			"- 代币: `%s`\n"+
-			"- 区间: ***%s***\n"+
 			"- 振幅: %s\n"+
-			"- 涨幅: %s(%s)\n"+
 			"- 最新价: %s\n"+
+			"- 涨幅: %s(%s)\n"+
+			"- 区间: ***%s***\n"+
 			"- 开盘价: %s(%s)\n"+
 			"- 最高价: %s(%s)\n"+
 			"- 最低价: %s(%s)\n"+
@@ -77,12 +76,12 @@ func SendPriceChangeMessage(priceChangeSignal data.PriceChangeSignal, telegramCh
 			"- 交易笔数: %s(%s)\n"+
 			"- 时间: %s\n",
 		_type,
-		strings.Replace(symbol, "USDT", "", -1),
-		cexName+"-"+interval,
+		simpleSymbol,
 		formatFloatToStr(Amplitude*100, 2)+"%",
+		formatFloatToStr(LastPrice24h, 8),
 		formatFloatToStr(PriceChangePercent*100, 2)+"%",
 		formatFloatToStr(PriceChangePercent24h, 2)+"%",
-		formatFloatToStr(LastPrice24h, 8),
+		cexName+"-"+interval,
 		formatFloatToStr(openPrice, 8),
 		formatFloatToStr(OpenPrice24h, 8),
 		formatFloatToStr(highPrice, 8),
@@ -92,9 +91,26 @@ func SendPriceChangeMessage(priceChangeSignal data.PriceChangeSignal, telegramCh
 		formatAmount(quoteVolume), formatAmount(quoteVolume24h),
 		formatAmount(float64(TradeNum)), formatAmount(float64(Count24h)),
 		formatDateStr(Time),
+		//GetTradeLink(_type, symbol),
 	)
 	msg := tgbotapi.NewMessage(telegramChatID, messageStr)
+
+	// 创建交易按钮
+	spotTradeURL := fmt.Sprintf("https://www.binance.com/zh-CN/trade/%s?type=spot", symbol)
+	futuresTradeURL := fmt.Sprintf("https://www.binance.com/zh-CN/futures/%s", symbol)
+
+	// 创建按钮行
+	spotTradeButton := tgbotapi.NewInlineKeyboardButtonURL("📈现货交易", spotTradeURL)
+	futuresTradeButton := tgbotapi.NewInlineKeyboardButtonURL("⚔️合约交易", futuresTradeURL)
+
+	// 设置按钮布局
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(spotTradeButton),
+		tgbotapi.NewInlineKeyboardRow(futuresTradeButton),
+	)
+
 	msg.ParseMode = tgbotapi.ModeMarkdown
+	msg.DisableWebPagePreview = true
 	message, _err := NewTgBot().Send(msg)
 	if _err != nil {
 		logger.WithFields(logger.Fields{
@@ -108,6 +124,15 @@ func SendPriceChangeMessage(priceChangeSignal data.PriceChangeSignal, telegramCh
 			"message_id": message.MessageID,
 			"symbol":     symbol,
 		}).Info("Telegram消息发送成功")
+	}
+}
+
+// GetTradeLink 根据代币符号返回跳转超链接
+func GetTradeLink(tradeType string, symbol string) string {
+	if tradeType == "现货" {
+		return fmt.Sprintf("[交易>](https://www.binance.com/zh-CN/trade/%s_USDT?type=spot)", symbol)
+	} else {
+		return fmt.Sprintf("[交易>](https://www.binance.com/zh-CN/futures/%sUSDT)", symbol)
 	}
 }
 
