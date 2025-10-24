@@ -49,6 +49,8 @@ func SubFuturesKLines(symbolIntervalPair map[string]string) {
 			coinTicker24h := binance.GetTicker24hFutures(event.Symbol)
 			if coinTicker24h != nil {
 				logger.WithField("coinTicker24h", binanceconnector.PrettyPrint(coinTicker24h)).Debug("获取期货24h行情成功")
+			} else {
+				return
 			}
 			openPrice24h, _ := strconv.ParseFloat(coinTicker24h.OpenPrice, 64)
 			lastPrice24h, _ := strconv.ParseFloat(coinTicker24h.LastPrice, 64)
