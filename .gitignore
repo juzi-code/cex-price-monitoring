@@ -1,5 +1,15 @@
+# real configs (contain secrets)
 /conf/app.yaml
+/conf/app.dev.yaml
+/conf/app.prod.yaml
+
+# IDE
 .idea
-.cex-price-monitoring.exe
+
+# binaries
+/cex-price-monitoring
 /cex-price-monitoring.exe
+/go_build_linux_linux
+
+# logs
 /logs/

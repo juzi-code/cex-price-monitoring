@@ -3,7 +3,7 @@ module cex-price-monitoring
 go 1.23
 
 require (
-	github.com/adshao/go-binance/v2 v2.8.4
+	github.com/adshao/go-binance/v2 v2.8.11
 	github.com/binance/binance-connector-go v0.8.0
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/sirupsen/logrus v1.9.3

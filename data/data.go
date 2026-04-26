@@ -1,10 +1,14 @@
 package data
 
-import "time"
+import (
+	"sync"
+	"time"
+)
 
 type PriceChangeSignal struct {
 	Type               string
 	Symbol             string
+	BaseAsset          string
 	CexName            string
 	Interval           string
 	OpenPrice          float64
@@ -30,12 +34,19 @@ type CoinTicker struct {
 	Count              uint64
 }
 
-var PriceChangeSignalRecord = make(map[string]*PriceChangeSignal)
+var (
+	signalMu sync.RWMutex
+	signals  = make(map[string]*PriceChangeSignal)
+)
 
-func GetCoinPriceChangeSignalRecord(symbol string) *PriceChangeSignal {
-	return PriceChangeSignalRecord[symbol]
+func GetSignalRecord(symbol string) *PriceChangeSignal {
+	signalMu.RLock()
+	defer signalMu.RUnlock()
+	return signals[symbol]
 }
 
-func SetCoinPriceChangeSignalRecord(priceChangeSignal *PriceChangeSignal) {
-	PriceChangeSignalRecord[priceChangeSignal.Symbol] = priceChangeSignal
+func SetSignalRecord(s *PriceChangeSignal) {
+	signalMu.Lock()
+	defer signalMu.Unlock()
+	signals[s.Symbol] = s
 }

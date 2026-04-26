@@ -1,14 +1,27 @@
 tg:
-  botToken: xxx
-  spotChatID: xxx
-  futuresChatID: xxx
+  botToken: "your-bot-token"
+  spotChatID: -100xxxxxxxxx      # 现货通知频道 chat_id
+  futuresChatID: -100xxxxxxxxx   # 期货通知频道 chat_id
+
+monitor:
+  symbolRefreshInterval: 30s     # 检查是否有新上币的间隔
+  minQuoteVolume24h: 1000000     # 24h 最低交易额过滤（USDT），低于此不通知
+  cooldown: 150s                  # 同一 symbol 两次通知之间的最短间隔
+  intervals:
+    - name: "1m"
+      threshold: 0.04             # 1分钟K线振幅 ≥ 4% 触发
+    - name: "5m"
+      threshold: 0.008            # 5分钟K线振幅 ≥ 0.8% 触发
 
 log:
-  level: info          # 日志级别: debug, info, warn, error
-  format: text         # 日志格式: json, text
-  output: both         # 输出方式: console, file, both
-  filePath: logs/app.log  # 日志文件路径
-  maxSize: 100         # 单个日志文件最大大小(MB)
-  maxBackups: 3        # 保留的旧日志文件数量
-  maxAge: 7            # 日志文件保留天数
-  compress: true       # 是否压缩旧日志文件
+  level: info          # debug / info / warn / error
+  format: text         # text / json
+  output: both         # console / file / both
+  filePath: logs/app.log
+  maxSize: 100         # MB
+  maxBackups: 3
+  maxAge: 7            # 天
+  compress: true
+
+# 环境切换：设置环境变量 APP_ENV=dev 会额外加载 conf/app.dev.yaml 覆盖上述配置
+# APP_ENV=dev go run .
