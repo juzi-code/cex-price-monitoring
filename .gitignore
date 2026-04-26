@@ -13,3 +13,6 @@
 
 # logs
 /logs/
+
+# build artifacts
+/dist/
