@@ -35,18 +35,20 @@ type CoinTicker struct {
 }
 
 var (
-	signalMu sync.RWMutex
-	signals  = make(map[string]*PriceChangeSignal)
+	signalMu   sync.RWMutex
+	signals    = make(map[string]*PriceChangeSignal)
+	notifiedAt = make(map[string]time.Time)
 )
 
-func GetSignalRecord(symbol string) *PriceChangeSignal {
-	signalMu.RLock()
-	defer signalMu.RUnlock()
-	return signals[symbol]
-}
-
-func SetSignalRecord(s *PriceChangeSignal) {
+// CheckAndSet atomically checks the cooldown and records the signal if not in cooldown.
+// Returns true if the signal was recorded (caller should send notification).
+func CheckAndSet(s *PriceChangeSignal, cooldown time.Duration) bool {
 	signalMu.Lock()
 	defer signalMu.Unlock()
+	if t, exists := notifiedAt[s.Symbol]; exists && time.Since(t) < cooldown {
+		return false
+	}
+	notifiedAt[s.Symbol] = time.Now()
 	signals[s.Symbol] = s
+	return true
 }

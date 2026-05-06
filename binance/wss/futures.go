@@ -40,10 +40,6 @@ func SubFuturesKLines(ctx context.Context, symbolIntervalPair map[string]string,
 
 		klineStart := time.UnixMilli(event.Kline.StartTime)
 		cfg := conf.Cfg().Monitor
-		if rec := data.GetSignalRecord(event.Symbol); rec != nil &&
-			rec.Time.Add(cfg.Cooldown).After(klineStart) {
-			return
-		}
 
 		quoteVolume, _ := strconv.ParseFloat(event.Kline.QuoteVolume, 64)
 		ticker := binance.GetFuturesTicker24h(event.Symbol)
@@ -87,12 +83,15 @@ func SubFuturesKLines(ctx context.Context, symbolIntervalPair map[string]string,
 			},
 		}
 
+		if !data.CheckAndSet(&signal, cfg.Cooldown) {
+			return
+		}
+
 		logger.WithFields(logger.Fields{
 			"symbol": event.Symbol, "amplitude": amplitude,
 		}).Info("期货振幅触发，发送通知")
 
 		tgbot.SendPriceChangeMessage(signal, conf.Cfg().TelegramData.FuturesChatID)
-		data.SetSignalRecord(&signal)
 	}
 
 	errHandler := func(err error) {
@@ -107,7 +106,7 @@ func SubFuturesKLines(ctx context.Context, symbolIntervalPair map[string]string,
 		}
 
 		logger.Info("Binance-订阅期货K线（可能重连）")
-		doneCh, _, err := adshaoBinance.WsCombinedKlineServe(symbolIntervalPair, handler, errHandler)
+		doneCh, stopCh, err := adshaoBinance.WsCombinedKlineServe(symbolIntervalPair, handler, errHandler)
 		if err != nil {
 			logger.WithField("error", err).Error("期货订阅失败，5s后重试")
 			select {
@@ -122,6 +121,7 @@ func SubFuturesKLines(ctx context.Context, symbolIntervalPair map[string]string,
 		case <-doneCh:
 			logger.Warn("Binance-期货连接断开，准备重连")
 		case <-ctx.Done():
+			close(stopCh)
 			return
 		}
 		time.Sleep(5 * time.Second)

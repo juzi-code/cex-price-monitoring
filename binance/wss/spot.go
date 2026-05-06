@@ -39,10 +39,6 @@ func SubSpotKLines(ctx context.Context, symbolIntervalPair map[string]string, th
 
 		klineStart := time.UnixMilli(event.Kline.StartTime)
 		cfg := conf.Cfg().Monitor
-		if rec := data.GetSignalRecord(event.Symbol); rec != nil &&
-			rec.Time.Add(cfg.Cooldown).After(klineStart) {
-			return
-		}
 
 		quoteVolume, _ := strconv.ParseFloat(event.Kline.QuoteVolume, 64)
 		ticker := binance.GetSpotTicker24h(event.Symbol)
@@ -86,12 +82,15 @@ func SubSpotKLines(ctx context.Context, symbolIntervalPair map[string]string, th
 			},
 		}
 
+		if !data.CheckAndSet(&signal, cfg.Cooldown) {
+			return
+		}
+
 		logger.WithFields(logger.Fields{
 			"symbol": event.Symbol, "amplitude": amplitude,
 		}).Info("现货振幅触发，发送通知")
 
 		tgbot.SendPriceChangeMessage(signal, conf.Cfg().TelegramData.SpotChatID)
-		data.SetSignalRecord(&signal)
 	}
 
 	errHandler := func(err error) {
@@ -106,7 +105,7 @@ func SubSpotKLines(ctx context.Context, symbolIntervalPair map[string]string, th
 		}
 
 		logger.Info("Binance-订阅现货K线（可能重连）")
-		doneCh, _, err := spotWsClient.WsCombinedKlineServe(symbolIntervalPair, handler, errHandler)
+		doneCh, stopCh, err := spotWsClient.WsCombinedKlineServe(symbolIntervalPair, handler, errHandler)
 		if err != nil {
 			logger.WithField("error", err).Error("现货订阅失败，5s后重试")
 			select {
@@ -121,6 +120,7 @@ func SubSpotKLines(ctx context.Context, symbolIntervalPair map[string]string, th
 		case <-doneCh:
 			logger.Warn("Binance-现货连接断开，准备重连")
 		case <-ctx.Done():
+			close(stopCh)
 			return
 		}
 		time.Sleep(5 * time.Second)
